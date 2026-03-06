@@ -1,75 +1,95 @@
-# VSD Squadron School Version - Micromouse Robot
+# VSD Squadron School Version - Micromouse Maze Solver
 
-This project features a maze-solving robot built using the **VSD Squadron FM FPGA** board. It includes complete RTL design, PCB schematics, and hardware implementation details.
-
-## Project Overview
-The robot uses ultrasonic sensors for navigation and a UART interface for telemetry. The core logic is implemented in Verilog and deployed on the VSD Squadron FM FPGA.
-
-### Key Features
-- **FPGA-Based Control**: Powered by VSD Squadron FM.
-- **Obstacle Avoidance**: Uses HC-SR04 ultrasonic sensors.
-- **Motor Control**: Dual motor driver integration.
-- **Telemetry**: Real-time data transmission via UART.
+This repository contains the complete hardware and software design for a maze-solving robot powered by the **VSD Squadron FM FPGA**. This project demonstrates a full-stack engineering approach, from custom PCB design to RTL logic implementation.
 
 ---
 
-## Hardware Design
-
-### PCB Schematics
-The design includes custom PCB layouts for the robot's mainboard.
-![Schematics](media/schematics.png)
-
-### Layout & 3D View
-| 2D Layout | 3D Visualization |
-| :---: | :---: |
-| ![Layout](media/Layout.png) | ![3D View](media/Layout_3D.png) |
+## 📸 Media Gallery
 
 ### Fabricated Robot
-Below are the photos of the assembled and fabricated robot:
 | Front View | Back View |
 | :---: | :---: |
 | ![Front](media/fab_front.jpeg) | ![Back](media/fab_abck.jpeg) |
 
----
+### Demonstration Videos
+| First Run | Final Maze Run |
+| :---: | :---: |
+| [Watch Video 1](media/mazefirst.mp4) | [Watch Video 2](media/maze2.mp4) |
 
-## RTL Design (Verilog)
-
-The source code is located in the `rtl/` directory.
-
-### 1. UART Module (`uart_trx.v`)
-- Implements an **8N1 UART transmitter**.
-- Operates at 9600 baud (when provided with the appropriate clock).
-- Features a state machine for IDLE, START, TXING, and DONE states.
-
-### 2. Ultrasonic Sensor Module (`ultra_sonic_sensor.v`)
-- Manages the **HC-SR04** sensor.
-- Generates the 10µs trigger pulse.
-- Measures the echo pulse width and converts it to distance in centimeters.
-- Includes a `refresher` module for periodic measurements (every 50ms/250ms).
-
-### 3. Pin Constraints (`VSDSquadronFM.pcf`)
-- Maps the Verilog signals to the physical pins of the VSD Squadron FM board.
-- Includes mappings for Motors (AIN/BIN), Sensors (Trig/Echo), and UART.
+*(Note: Videos are hosted in the `media/` folder. For the best experience, view them on GitHub.)*
 
 ---
 
-## Demonstrations
+## 🛠️ Hardware Design: Step-by-Step
 
-### Maze Solving Performance
-Watch the robot navigate through a maze:
+### 1. Conceptual Schematic
+The heart of the robot is the **VSD Squadron FM FPGA**. The schematic integrates:
+- **Power Management**: Regulated 5V and 3.3V rails.
+- **Sensor Interface**: Connectivity for 3 HC-SR04 Ultrasonic sensors.
+- **Motor Driving**: Interface to the L298N/DRV8833 motor driver.
+- **Telemetry**: UART pins for debugging.
 
-https://github.com/gowthamnow/VSD_SQUADRON_SCHOOL_VERSION/assets/media/mazefirst.mp4
+![Schematics](media/schematics.png)
 
-https://github.com/gowthamnow/VSD_SQUADRON_SCHOOL_VERSION/assets/media/maze2.mp4
+### 2. Custom VSD Squadron FM Footprint
+One of the core challenges was designing a precise **footprint for the VSD Squadron FM**. 
+- **Specifications**: 36-pin header layout with standardized pitch.
+- **Design Process**: Created in Altium/EasyEDA using exact physical dimensions to ensure the FPGA board sits flush on the robot's motherboard.
+- **Mapping**: All FPGA I/Os (Pins 2, 3, 4, 6, 9, 10, 12, 13, 14, 15, 18, 19, 21, 27, 28, 31, 32, 34) are correctly routed.
 
-*(Note: GitHub supports direct video playback for MP4 files in the repository.)*
+![Footprint](media/footprint.png)
+
+### 3. PCB Layout & 3D Visualization
+The PCB is a two-layer design optimized for signal integrity and weight distribution.
+- **Front Layer**: Signal routing and sensor mounting.
+- **Back Layer**: Ground plane and power traces.
+
+| Top Layout | 3D Visualization |
+| :---: | :---: |
+| ![Layout](media/Layout.png) | ![3D View](media/Layout_3D.png) |
 
 ---
 
-## About VSD Squadron FM
-The **VSD Squadron FM** is a versatile FPGA development board designed for educational and professional applications. It provides a robust platform for learning RTL design and building complex embedded systems.
+## 💻 RTL Logic: Code Walkthrough
 
-## Getting Started
-1. **Hardware**: Refer to `hardware/` for schematics and PCB design files.
-2. **Software**: Use the Verilog files in `rtl/` with your preferred FPGA synthesis tool (e.g., iCEcube2 or open-source tools like Yosys/Nextpnr).
-3. **Constraints**: Apply `VSDSquadronFM.pcf` for pin mapping.
+The logic is divided into modular Verilog components for scalability.
+
+### 1. Ultrasonic Sensor Controller (`ultra_sonic_sensor.v`)
+This module handles the real-time distance measurement using the HC-SR04.
+- **Step 1: Trigger Generation**: Sends a 10µs pulse to the `trig` pin to start the measurement.
+- **Step 2: Echo Timing**: Uses a high-speed counter to measure how long the `echo` pin stays high.
+- **Step 3: Distance Calculation**: 
+  - Formula: `Distance (cm) = (Time * Speed of Sound) / 2`
+  - Verilog Implementation: `distance_cm <= (distanceRAW * 34300) / (2 * 12000000);` (Assuming 12MHz clock).
+- **Step 4: Refresher Pulse**: Re-triggers the measurement every 50ms to ensure the robot has fresh data for navigation.
+
+### 2. UART Telemetry (`uart_trx.v`)
+A robust 8N1 UART transmitter for sending sensor data back to a PC.
+- **State Machine**:
+  - `IDLE`: Waits for `senddata` signal.
+  - `STARTTX`: Pulls TX low for 1 bit-period.
+  - `TXING`: Shifts out 8 bits of data (LSB first).
+  - `TXDONE`: Pulls TX high (Stop bit) and signals completion.
+- **Baud Rate**: Designed for 9600 baud when clocked correctly.
+
+### 3. Physical Constraints (`VSDSquadronFM.pcf`)
+Maps the internal signals to physical FPGA pins:
+- **Motors**: Pins 19, 21, 27, 28 (Direction); Pins 31, 32 (PWM).
+- **Sensors**: 
+  - Front: Pins 2 (Echo), 3 (Trig).
+  - Left: Pins 9 (Echo), 6 (Trig).
+  - Right: Pins 13 (Echo), 12 (Trig).
+
+---
+
+## 🚀 Getting Started
+
+1. **Clone the Repo**: `git clone https://github.com/gowthamnow/VSD_SQUADRON_SCHOOL_VERSION.git`
+2. **Setup Tools**: Install `OSS CAD Suite` or `iCEcube2`.
+3. **Compile**: Use `yosys` and `nextpnr` with the provided `.pcf` file.
+4. **Flash**: Load the bitstream onto the VSD Squadron FM.
+
+---
+
+## 👨‍🏫 About the Project
+This project was developed for school to showcase the power of FPGA-based robotics. It combines electronics, embedded programming, and mechanical design into a single functional unit.
