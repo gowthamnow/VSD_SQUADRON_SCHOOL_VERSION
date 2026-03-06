@@ -1,0 +1,28 @@
+
+set_io uarttx 14
+set_io uartrx 15
+set_io hw_clk 20
+
+# Ultrasonic Sensor 1
+set_io echo1 2
+set_io trig1 3
+set_io led1 4
+
+# Ultrasonic Sensor 2
+set_io echo2 9
+set_io trig2 6
+set_io led2 10
+
+# Ultrasonic Sensor 3
+set_io echo3 13
+set_io trig3 12
+set_io led3 18
+
+# Motor Control
+set_io AIN1 19
+set_io AIN2 21
+set_io BIN1 27
+set_io BIN2 28
+set_io PWMA 31
+set_io PWMB 32
+set_io STBY 34
